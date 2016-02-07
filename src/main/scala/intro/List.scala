@@ -48,7 +48,10 @@ object Lists {
    * resX: Int = 4
    */
   def length[A](xs: List[A]): Int =
-    ???
+    xs match {
+      case Nil => 0
+      case h :: t => 1 + length(t)
+    }
 
   /*
    * Exercise 2:
@@ -59,7 +62,7 @@ object Lists {
    * resX: Int = 4
    */
   def lengthX[A](xs: List[A]): Int =
-    ???
+    xs.foldRight(0)((_, len) => len + 1)
 
   /*
    * Exercise 3:
@@ -70,7 +73,14 @@ object Lists {
    * resX: List[Int] = List(1, 2, 3, 4, 5, 6, 7, 8)
    */
   def append[A](x: List[A], y: List[A]): List[A] =
-    ???
+    x.foldRight(y)((v, acc) => v :: acc)
+
+  def append2[A](x: List[A], y: List[A]): List[A] =
+    (x, y) match {
+      case (Nil, y) => y
+      case (x, Nil) => x
+      case (h :: t, y) => h :: append2(t, y)
+    }
 
   /*
    * Exercise 4:
@@ -88,7 +98,13 @@ object Lists {
    *     not infer what you mean.
    */
   def map[A, B](xs: List[A])(f: A => B): List[B] =
-    ???
+    xs.foldRight(Nil : List[B])((x, ls) => f(x) :: ls)
+
+  def map2[A, B](xs: List[A])(f: A => B): List[B] =
+    xs match {
+      case Nil => Nil
+      case h :: t => f(h) :: map2(t)(f)
+    }
 
   /*
    * Exercise 5:
@@ -99,7 +115,13 @@ object Lists {
    * resX: List[Int] = List(1, 2)
    */
   def filter[A](xs: List[A])(p: A => Boolean): List[A] =
-    ???
+    xs.foldRight(Nil: List[A])((x, ls) => if (p(x)) x :: ls else ls)
+
+  def filter2[A](xs: List[A])(p: A => Boolean): List[A] =
+    xs match {
+      case Nil => Nil
+      case h :: t => if (p(h)) h :: filter2(t)(p) else filter2(t)(p)
+    }
 
   /*
    * Exercise 6:
@@ -117,8 +139,7 @@ object Lists {
    *     not infer what you mean.
    */
   def reverse[A](xs: List[A]): List[A] =
-    ???
-
+    xs.foldLeft(Nil: List[A])((ls, x) => x :: ls)
 
   /*
    * *Challenge* Exercise 7:
@@ -134,7 +155,9 @@ object Lists {
    * resX: Option[List[Int]] = None
    */
   def sequence[A](xs: List[Option[A]]): Option[List[A]] =
-    ???
+    xs.foldRight(Some(List()): Option[List[A]]) { (x, opls) =>
+      x.flatMap(v => opls.map(ls => v :: ls))
+    }
 
   /*
    * *Challenge* Exercise 8:

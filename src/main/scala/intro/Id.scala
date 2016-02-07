@@ -16,8 +16,7 @@ case class Id[A](value: A) {
    * scala> Id(1).map(x => x + 10)
    *  = Id(11)
    */
-  def map[B](f: A => B): Id[B] =
-    ???
+  def map[B](f: A => B): Id[B] = Id(f(value))
 
   /*
    * Implement flatMap.
@@ -29,7 +28,7 @@ case class Id[A](value: A) {
    *  = Id(11)
    */
   def flatMap[B](f: A => Id[B]): Id[B] =
-    ???
+    f(value)
 }
 
 object Id {
@@ -40,5 +39,5 @@ object Id {
    *  = Id(1)
    */
   def point[A](v: A): Id[A] =
-    ???
+    Id(v)
 }

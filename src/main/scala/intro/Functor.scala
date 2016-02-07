@@ -47,17 +47,17 @@ object Functor {
 
   /** Exercise: 1 - Twin all `A`s in `fa`. */
   def fpair[F[_]: Functor, A](fa: F[A]): F[(A, A)] =
-    ???
+    Functor[F].map(fa)(a => (a, a))
 
   /** Exercise: 2 - Pair all `A`s in `fa` with the result of function application. */
   def fproduct[F[_]: Functor, A, B](fa: F[A])(f: A => B): F[(A, B)] =
-    ???
+    Functor[F].map(fa)(a => (a, f(a)))
 
   /** Exercise: 3 - Inject `a` to the left of `B`s in `f`. */
   def strengthL[F[_]: Functor, A, B](a: A, f: F[B]): F[(A, B)] =
-    ???
+    Functor[F].map(f)(b => (a, b))
 
   /** Exercise: 4 - Inject `b` to the right of `A`s in `f`. */
   def strengthR[F[_]: Functor, A, B](f: F[A], b: B): F[(A, B)] =
-    ???
+    Functor[F].map(f)(a => (a, b))
 }
