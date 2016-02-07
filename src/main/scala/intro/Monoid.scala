@@ -40,44 +40,66 @@ object Monoid {
   /* Monoid instances */
 
   /** Exercise 1: A monoid which takes the sum of the underlying integer values */
-  implicit def SumMonoid: Monoid[Sum] =
-    ???
+  implicit def SumMonoid: Monoid[Sum] = new Monoid[Sum] {
+    def identity: Sum = Sum(0)
+    def op(x: Sum, y: Sum) = Sum(x.n + y.n)
+  }
 
   /** Exercise 2: A monoid which takes the multiplication of the underlying integer values */
-  implicit def ProductMonoid: Monoid[Product] =
-    ???
+  implicit def ProductMonoid: Monoid[Product] = new Monoid[Product] {
+    def identity: Product = Product(1)
+    def op(x: Product, y: Product) = Product(x.n * y.n)
+  }
 
   /** Exercise 3: A monoid which takes the minimum of the underlying integer values */
-  implicit def MinMonoid: Monoid[Min] =
-    ???
+  implicit def MinMonoid: Monoid[Min] = new Monoid[Min] {
+    def identity: Min = Min(Int.MaxValue)
+    def op(x: Min, y: Min) = if (x.n < y.n) x else y
+  }
 
   /** Exercise 4: A monoid which takes the maximum of the underlying integer values */
-  implicit def MaxMonoid: Monoid[Max] =
-    ???
+  implicit def MaxMonoid: Monoid[Max] = new Monoid[Max] {
+    def identity: Max = Max(Int.MinValue)
+    def op(x: Max, y: Max) = if (x.n > y.n) x else y
+  }
 
   /** Exercise 5: A monoid which counts the number of underlying values */
-  implicit def SizeMonoid: Monoid[Size] =
-    ???
+  implicit def SizeMonoid: Monoid[Size] = new Monoid[Size] {
+    def identity: Size = Size(0)
+    def op(x: Size, y: Size) = Size(x.n + y.n)
+  }
 
   /** Exercise 6: A monoid which composes the underlying functions */
-  implicit def EndoMonoid[A]: Monoid[Endo[A]] =
-    ???
+  implicit def EndoMonoid[A]: Monoid[Endo[A]] = new Monoid[Endo[A]] {
+    def identity: Endo[A] = Endo(a => a)
+    def op(x: Endo[A], y: Endo[A]) = Endo(a => y.f(x.f(a)))
+  }
 
   /** Exercise 7: A monoid which always takes the first value */
-  implicit def FirstMonoid[A]: Monoid[First[A]] =
-    ???
+  implicit def FirstMonoid[A]: Monoid[First[A]] = new Monoid[First[A]] {
+    def identity: First[A] = First(None)
+    def op(x: First[A], y: First[A]) = x.first.fold(y)(_ => x)
+  }
 
   /** Exercise 8: A monoid which always takes the last value */
-  implicit def LastMonoid[A]: Monoid[Last[A]] =
-    ???
+  implicit def LastMonoid[A]: Monoid[Last[A]] = new Monoid[Last[A]] {
+    def identity: Last[A] = Last(None)
+    def op(x: Last[A], y: Last[A]) = y.last.fold(x)(_ => y)
+  }
 
   /** Exercise 9: A monoid which concatenates lists */
-  implicit def ListMonoid[A]: Monoid[List[A]] =
-    ???
+  implicit def ListMonoid[A]: Monoid[List[A]] = new Monoid[List[A]] {
+    def identity: List[A] = List()
+    def op(x: List[A], y: List[A]) = x ++ y
+  }
 
   /** Exercise 10: A monoid which unions the map, applying op to merge values */
-  implicit def MapMonoid[A, B: Monoid]: Monoid[Map[A, B]] =
-    ???
+  implicit def MapMonoid[A, B: Monoid]: Monoid[Map[A, B]] = new Monoid[Map[A, B]] {
+    def identity: Map[A, B] = Map()
+    def op(x: Map[A, B], y: Map[A, B]) = x.foldRight(y) {
+      case ((k, v), m) => m + (k -> m.get(k).fold(v)(u => Monoid[B].op(u, v)))
+    }
+  }
 
   /*  Monoid library */
 
@@ -93,7 +115,7 @@ object Monoid {
    *  = Sum(15)
    */
   def foldMap[A, B: Monoid](xs: List[A])(f: A => B): B =
-    ???
+    xs.foldRight(Monoid[B].identity){(a, b) => Monoid[B].op(f(a), b)}
 
   /**
    * Exercise 12
@@ -103,8 +125,13 @@ object Monoid {
    * scala> sum(List("hello", " ", "world"))
    *  = "hello world"
    */
+  implicit def StringAppendMonoid: Monoid[String] = new Monoid[String] {
+    def identity = ""
+    def op(x: String, y: String) = x + y
+  }
+
   def sum[A: Monoid](xs: List[A]): A =
-    ???
+    foldMap(xs)(x => x)
 }
 
 object MonoidSyntax {
@@ -144,7 +171,12 @@ object MonoidChallenge {
    * (this may be useful, but is not the only way to solve this problem).
    */
   def compute(data: List[Stock], predicate: Stock => Boolean): Map[String, Stats] =
-    ???
+    Monoid.foldMap(data) {
+      case s@Stock(t, _, c) if predicate(s) => Map((t, (Min(c), Max(c), Sum(c), Size(1))))
+      case Stock(t, _, _) => Map((t, Monoid[(Min, Max, Sum, Size)].identity))
+    }.mapValues {
+      case (Min(a), Max(b), Sum(c), Size(d)) => Stats(a, b, c, d, if (d == 0) 0 else c / d)
+    }
 
   def Data = List(
     Stock("FAKE", "2012-01-01", 10000)
