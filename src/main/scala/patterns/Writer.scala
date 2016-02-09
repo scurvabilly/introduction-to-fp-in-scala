@@ -21,8 +21,7 @@ case class Writer[W, A](log: W, value: A) {
    *  2) r.map(z => f(g(z))) == r.map(g).map(f)
    *
    */
-  def map[B](f: A => B): Writer[W, B] =
-    ???
+  def map[B](f: A => B): Writer[W, B] = Writer(log, f(value))
 
   /*
    * Exercise 3.2:
@@ -33,8 +32,10 @@ case class Writer[W, A](log: W, value: A) {
    *   r.flatMap(f).flatMap(g) == r.flatMap(z => f(z).flatMap(g))
    *
    */
-  def flatMap[B](f: A => Writer[W, B])(implicit M: Monoid[W]): Writer[W, B] =
-    ???
+  def flatMap[B](f: A => Writer[W, B])(implicit M: Monoid[W]): Writer[W, B] = {
+    val b = f(value)
+    Writer(M.op(log, b.log), b.value)
+  }
 }
 
 object Writer {
@@ -46,8 +47,7 @@ object Writer {
    *
    * Hint: Try using Writer constructor.
    */
-  def value[W: Monoid, A](a: A): Writer[W, A] =
-    ???
+  def value[W: Monoid, A](a: A): Writer[W, A] = Writer(Monoid[W].identity, a)
 
   /*
    * Exercise 3.4:
@@ -58,16 +58,17 @@ object Writer {
    *
    * Hint: Try using Writer constructor.
    */
-  def tell[W](w: W): Writer[W, Unit] =
-    ???
+  def tell[W](w: W): Writer[W, Unit] = Writer(w, Unit)
 
   /*
    * Exercise 3.5:
    *
-   * Sequence, a list of Readers, to a Reader of Lists.
+   * Sequence, a list of Writers, to a Writer of Lists.
    */
   def sequence[W: Monoid, A](writers: List[Writer[W, A]]): Writer[W, List[A]] =
-    ???
+    writers.foldRight(Writer.value(List()): Writer[W, List[A]]) { (w, r) =>
+      w.flatMap(v => r.map(vs => v :: vs))
+    }
 
   class Writer_[W] {
     type l[a] = Writer[W, a]
@@ -119,17 +120,21 @@ object WriterExample {
    * Hint: Writer(W, A) and Writer.sequence will be useful here.
    */
   def stocks(data: List[Stock]): (Stats, List[Stock]) =
-    ???
+    Writer.sequence(data.map { s =>
+      val sNew = Stock(s.ticker, s.date, s.cents + (if (s.cents < 10000) 1000 else 10))
+      Writer(Stats(sNew.cents, sNew.cents, sNew.cents, 1), sNew)
+    }).run
 
   /**
    * A monoid for Stats.
    */
   implicit def StatsMonoid: Monoid[Stats] =
     new Monoid[Stats] {
-      def identity =
-        ???
-      def op(l: Stats, r: Stats) =
-        ???
+      def identity = Stats(Int.MaxValue, Int.MinValue, 0, 0)
+      def op(l: Stats, r: Stats) = (l, r) match {
+        case (Stats(lMn, lMx, lT, lC), Stats(rMn, rMx, rT, rC)) =>
+          Stats(math.min(lMn, rMn), math.max(lMx, rMx), lT + rT, lC + rC)
+      }
     }
 
   def exampledata = List(

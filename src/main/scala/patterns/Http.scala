@@ -17,8 +17,11 @@ case class Http[A](run: (HttpRead, HttpState) => (HttpWrite, HttpState, HttpValu
    *  1) r.map(z => z) == r
    *  2) r.map(z => f(g(z))) == r.map(g).map(f)
    */
-  def map[B](f: A => B): Http[B] =
-    ???
+  def map[B](f: A => B): Http[B] = Http{(r, s) =>
+    run(r, s) match {
+      case (ww, ss, vv) => (ww, ss, vv.map(f))
+    }
+  }
 
   /*
    * Exercise 8a.2:
@@ -29,8 +32,15 @@ case class Http[A](run: (HttpRead, HttpState) => (HttpWrite, HttpState, HttpValu
    *   r.flatMap(f).flatMap(g) == r.flatMap(z => f(z).flatMap(g))
    *
    */
-  def flatMap[B](f: A => Http[B]): Http[B] =
-    ???
+  def flatMap[B](f: A => Http[B]): Http[B] = Http{(r, s) =>
+    run(r, s) match {
+      case (ww, ss, vv) => vv.map(a => f(a).run(r, ss)).fold(
+        ex => (ww, ss, HttpValue.explosion(ex): HttpValue[B]),
+        msg => (ww, ss, HttpValue.fail(msg): HttpValue[B]),
+        resp => (ww ++ resp._1, resp._2, resp._3)
+      )
+    }
+  }
 }
 
 object Http {
@@ -41,8 +51,7 @@ object Http {
    *
    * Hint: Try using Http constructor.
    */
-  def value[A](a: => A): Http[A] =
-    ???
+  def value[A](a: => A): Http[A] = Http((r, s) => (HttpWrite(Vector()), s, HttpValue.ok(a)))
 
   /*
    * Exercise 8a.4:
@@ -51,8 +60,7 @@ object Http {
    *
    * Hint: Try using Http constructor.
    */
-  def httpAsk: Http[HttpRead] =
-    ???
+  def httpAsk: Http[HttpRead] = Http((r, s) => (HttpWrite(Vector()), s, HttpValue.ok(r)))
 
   /*
    * Exercise 8a.5:
@@ -61,8 +69,7 @@ object Http {
    *
    * Hint: Try using Http constructor.
    */
-  def httpGet: Http[HttpState] =
-    ???
+  def httpGet: Http[HttpState] = Http((r, s) => (HttpWrite(Vector()), s, HttpValue.ok(s)))
 
   /*
    * Exercise 8a.6:
@@ -71,8 +78,7 @@ object Http {
    *
    * Hint: Try using Http constructor.
    */
-  def httpModify(f: HttpState => HttpState): Http[Unit] =
-    ???
+  def httpModify(f: HttpState => HttpState): Http[Unit] = Http((r, s) => (HttpWrite(Vector()), f(s), HttpValue.ok(())))
 
   /*
    * Exercise 8a.7:
@@ -82,8 +88,7 @@ object Http {
    * Hint: You may want to define some other combinators to help
    *       that have not been specified yet, remember exercise 2 ask?
    */
-  def getBody: Http[String] =
-    ???
+  def getBody: Http[String] = httpAsk.map(_.body)
 
   /*
    * Exercise 8a.8:
@@ -93,8 +98,7 @@ object Http {
    * Hint: You may want to define some other combinators to help
    *       that have not been specified yet, remember exercise 4 update?
    */
-  def addHeader(name: String, value: String): Http[Unit] =
-    ???
+  def addHeader(name: String, value: String): Http[Unit] = httpModify(s => HttpState(s.resheaders :+ (name -> value)))
 
   /*
    * Exercise 8a.9:
@@ -103,8 +107,7 @@ object Http {
    *
    * Hint: Try using Http constructor.
    */
-  def log(message: String): Http[Unit] =
-    ???
+  def log(message: String): Http[Unit] = Http((r, s) => (HttpWrite(Vector(message)), s, HttpValue.ok(())))
 
   implicit def HttpMonad: Monad[Http] =
     new Monad[Http] {
@@ -129,7 +132,11 @@ object HttpExample {
    * Hint: Try using flatMap or for comprehensions.
    */
   def echo: Http[String] =
-    ???
+    for {
+      body <- getBody
+      _    <- addHeader("content-type", "text/plain")
+      _    <- log(body.length.toString)
+    } yield body
 }
 
 
