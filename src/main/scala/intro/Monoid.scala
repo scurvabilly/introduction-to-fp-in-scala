@@ -172,10 +172,12 @@ object MonoidChallenge {
    */
   def compute(data: List[Stock], predicate: Stock => Boolean): Map[String, Stats] =
     Monoid.foldMap(data) {
-      case s@Stock(t, _, c) if predicate(s) => Map((t, (Min(c), Max(c), Sum(c), Size(1))))
+      case s @ Stock(t, _, c) if predicate(s) => Map((t, (Min(c), Max(c), Sum(c), Size(1))))
       case Stock(t, _, _) => Map((t, Monoid[(Min, Max, Sum, Size)].identity))
+    }.filter{
+      case (_, (_, _, _, size)) => size.n > 0
     }.mapValues {
-      case (Min(a), Max(b), Sum(c), Size(d)) => Stats(a, b, c, d, if (d == 0) 0 else c / d)
+      case (Min(a), Max(b), Sum(c), Size(d)) => Stats(a, b, c, d, c / d)
     }
 
   def Data = List(
